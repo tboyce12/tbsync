@@ -1,0 +1,163 @@
+<html>
+  <head>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    <script>
+    
+    // Model
+    var widgets = [];
+    function createWidget(index) {
+      if (widgetAtIndex(index)) return;
+      index = undefined != index ? index :
+        widgets.length ? widgets[widgets.length - 1].index + 1 : 0;
+      widget = {
+        index: index,
+        dirty: true,
+        deleted: false,
+        value: ""
+      };
+      widgets.push(widget);
+    }
+    function updateWidget(index, updates) {
+      widget = widgetAtIndex(index);
+      if (widget) {
+        widget.dirty = true;
+        if (undefined != updates.index) widget.index = updates.index;
+        if (undefined != updates.deleted) widget.deleted = updates.deleted;
+        if (undefined != updates.value) widget.value = updates.value;
+      }
+    }
+    function widgetAtIndex(index) {
+      for (var i = 0; i < widgets.length; i++) {
+        widget = widgets[i];
+        if (widget.index == index) {
+          return widget;
+        }
+      }
+      return null;
+    }
+    function livingWidgets() {
+      var livingWidgets = [];
+      for (var i = 0; i < widgets.length; i++) {
+        var widget = widgets[i];
+        if (!widget.deleted) {
+          livingWidgets.push(widget);
+        }
+      }
+      return livingWidgets;
+    }
+    function dirtyWidgets() {
+      var dirtyWidgets = [];
+      for (var i = 0; i < widgets.length; i++) {
+        var widget = widgets[i];
+        if (widget.dirty) {
+          dirtyWidgets.push(widget);
+        }
+      }
+      return dirtyWidgets;
+    }
+    function cleanWidgets() {
+      for (var i = 0; i < widgets.length; i++) {
+        var widget = widgets[i];
+        widget.dirty = false;
+      }
+      widgets.sort(function (a, b) {
+        return a.index - b.index;
+      });
+    }
+    
+    // View
+    function initView() {
+      $("#create").click(createClicked);
+      $("#sync").click(syncClicked);
+    }
+    function display() {
+      var div = $("#widgets").empty();
+      var widgets = livingWidgets();
+      for (var i = 0; i < widgets.length; i++) {
+        var widget = widgets[i];
+        div.append(
+          $("<p></p>").append(
+            $("<input />").change(function (index) {
+              return function () {
+                inputChanged(index, this.value);
+              }
+            }(widget.index)).attr({ value: widget.value })
+          ).append(
+            $("<a></a>").click(function (index) {
+              return function () {
+                deleteClicked(index);
+              }
+            }(widget.index)).attr({ href: "#" }).html("Delete")
+          )
+        );
+      }
+    }
+    
+    // Controller
+    function createClicked() {
+      createWidget();
+      display();
+    }
+    function inputChanged(index, value) {
+      updateWidget(index, { value: value });
+    }
+    function deleteClicked(index) {
+      updateWidget(index, { deleted: true });
+      display();
+    }
+    function syncClicked() {
+      sync(function () {
+        display();
+      });
+    }
+    $(document).ready(function () {
+      initView();
+    });
+    
+    // Helper
+    var clientVersion = 0;
+    function sync(success) {
+      var request = {
+        clientVersion: clientVersion,
+        clientChanges: dirtyWidgets()
+      };
+      callServerAsync(request, function (response) {
+        for (var i = 0; i < response.moves.length; i++) {
+          var move = response.moves[i];
+          updateWidget(move.from, { index: move.to });
+        }
+        for (var i = 0; i < response.serverChanges.length; i++) {
+          var serverChange = response.serverChanges[i];
+          createWidget(serverChange.index);
+          updateWidget(serverChange.index, {
+            value: serverChange.value,
+            deleted: serverChange.deleted
+          });
+        }
+        cleanWidgets();
+        clientVersion = response.serverVersion;
+        success();
+      });
+    }
+    function callServerAsync(request, success) {
+      $.ajax({
+        url: "/cms/sync",
+        type: 'POST',
+        data: JSON.stringify(request),
+        contentType: 'application/json; charset=utf-8',
+        success: function (response) {
+          success(response);
+        }
+      });
+    }
+    
+    </script>
+  </head>
+  <body>
+    <h1>Widgets</h1>
+    <p><a id="create" href="#">Create</a></p>
+    <div id="widgets">
+    </div>
+    <p><button id="sync">Sync</button></p>
+  </body>
+</html>
