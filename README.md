@@ -10,4 +10,4 @@ I developed this app over the course of a few hours before I started at [Guidebo
 2. Run `python manage.py syncdb` and follow prompts
 3. Run `python manage.py migrate`
 4. Run `python manage.py runserver`
-5. Navigate to **http://127.0.0.1:8000/cms** in a few browser windows
+5. Navigate to http://127.0.0.1:8000/cms in a few browser windows
