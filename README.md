@@ -1,6 +1,6 @@
 # tbsync
 
-This Django app lets you manage and sync Widgets. When you click the "Sync" button, local changes since last sync are pushed to the server and remote changes since last sync are pulled from the server.
+This Django app lets you manage and sync Widgets. When you click the "Sync" button, local changes since last sync are pushed to the server and remote changes since last sync are pulled from the server. When merge conflicts occur, whoever pushed to server first wins.
 
 ![Demo animation](Example.gif)
 
